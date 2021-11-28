@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.admin.dao.SysRequestMenuDao">
+
+    <select id="queryListByUserId" resultType="com.embracesource.traffic.admin.domain.SysRequestMenuDO">
+        select srm.*
+        from sys_user su
+                 left join sys_user_role_relation surr on su.id = surr.user_id
+                 left join sys_role_menu_relation srmr on surr.role_id = srmr.role_id
+                 left join sys_request_menu srm on srmr.menu_id = srm.id
+        where su.id = #{userId}
+    </select>
+    <select id="queryListByUserName" resultType="com.embracesource.traffic.admin.domain.SysRequestMenuDO">
+        select srm.*
+        from sys_user su
+                 left join sys_user_role_relation surr on su.id = surr.user_id
+                 left join sys_role_menu_relation srmr on surr.role_id = srmr.role_id
+                 left join sys_request_menu srm on srmr.menu_id = srm.id
+        where su.id = #{currentUserName}
+    </select>
+</mapper>

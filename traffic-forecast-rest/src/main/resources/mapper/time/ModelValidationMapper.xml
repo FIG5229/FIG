@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.ModelValidationDao">
+
+    <select id="getTimeCareInfoByPage" resultType="com.embracesource.traffic.time.dto.ModelValidationResponseDTO">
+        SELECT
+        start_station,
+        w_num,
+        a_num,
+        w_fd_minutes,
+        w_dd_minutes,
+        a_fd_minutes,
+        a_dd_minutes,
+        w_tl_minutes,
+        a_tl_minutes
+        FROM
+            offline_result
+        WHERE
+         1=1
+        <if test="startingStand != null and startingStand != '' ">
+            and start_station = #{startingStand}
+        </if>
+        <if test="currentStand != null and currentStand != '' ">
+            and current_station = #{currentStand}
+        </if>
+        <if test="endStand != null and endStand != '' ">
+            and end_station = #{endStand}
+        </if>
+        <if test="orderSort != null and orderSort != '' and orderSort == 'ASC' ">
+            ORDER BY current_station ASC
+        </if>
+        <if test="orderSort != null and orderSort != '' and orderSort == 'DESC' ">
+            ORDER BY current_station DESC
+        </if>
+            limit #{getPageSize} offset #{newPage}
+    </select>
+
+    <select id="getTimeCareInfo" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            offline_result
+        where
+            1 = 1
+        <if test="startingStand != null and startingStand != '' ">
+            and start_station = #{startingStand}
+        </if>
+        <if test="currentStand != null and currentStand != '' ">
+            and current_station = #{currentStand}
+        </if>
+        <if test="endStand != null and endStand != '' ">
+            and end_station = #{endStand}
+        </if>
+    </select>
+
+    <select id="getCarNo" resultType="com.embracesource.traffic.time.dto.HitRateNotHitResponseDTO">
+        SELECT
+            car_no carNo,
+            start_station startStation,
+            end_station endStation
+        FROM
+            hit_result a
+        WHERE
+            to_char ( to_timestamp ( cast( a.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) > #{date}
+            AND is_hit = '0'
+            GROUP BY car_no,start_station,end_station
+    </select>
+
+    <select id="getSectionList" resultType="com.embracesource.traffic.time.dto.SectionResponseDTO">
+        SELECT
+            *
+        FROM
+            (
+        SELECT
+            start_station,
+            end_station,
+            round( AVG ( CAST ( error AS INT )), 2 )
+        FROM
+            hit_result A
+        WHERE
+            to_char( to_timestamp( CAST ( A.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) > #{date}
+            AND error IS NOT NULL
+        GROUP BY
+            start_station,
+            end_station
+            ) T
+        ORDER BY
+            round DESC
+            LIMIT 10
+    </select>
+
+    <select id="getStationList" resultType="com.embracesource.traffic.time.dto.StationResponseDTO">
+        SELECT
+            *
+        FROM
+            (
+        SELECT
+            current_station,
+            round( AVG ( CAST ( error AS INT )), 2 )
+        FROM
+            hit_result A
+        WHERE
+            to_char( to_timestamp( CAST ( A.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) > #{date}
+            AND error IS NOT NULL
+        GROUP BY
+            current_station
+            ) T
+        ORDER BY
+            round DESC
+            LIMIT 10
+    </select>
+
+    <select id="getNotHitList" resultType="com.embracesource.traffic.screen.domain.HitResult">
+        SELECT
+            *
+        FROM
+            hit_result
+        WHERE
+            car_no = #{carNo}
+            AND start_station = #{startingStand}
+            AND end_station = #{endStand}
+        ORDER BY report_time DESC ,path_time DESC
+    </select>
+
+    <select id="getCountHitList" resultType="java.util.Map">
+        SELECT
+            count(1) cou,
+            current_station currentStation
+        FROM
+            hit_result a
+        WHERE
+            to_char ( to_timestamp ( cast( a.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) > #{date}
+            AND is_hit = '0'
+            GROUP BY current_station
+    </select>
+
+    <select id="getNotHitAllList" resultType="com.embracesource.traffic.screen.domain.HitResult">
+        SELECT
+            car_no, start_station, end_station,is_hit,current_station
+        FROM
+            hit_result
+        WHERE
+            car_no || start_station || end_station IN (
+        SELECT
+            car_no || start_station || end_station
+        FROM
+            hit_result a
+        WHERE
+            to_char ( to_timestamp ( cast( a.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) > #{date}
+            AND is_hit = '0'
+            ) ORDER BY car_no,
+            start_station,
+            end_station,
+            report_time desc
+    </select>
+
+    <delete id="deleteAll">
+        delete from hit_rate where 1=1
+    </delete>
+
+    <select id="seleceHitRatelist" resultType="com.embracesource.traffic.time.domain.HitRate">
+        SELECT DISTINCT
+            current_station,
+            hit_rate
+        FROM
+            hit_rate;
+    </select>
+
+
+
+
+</mapper>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.forecast.dao.OfflineResultDao">
+    <select id="queryAllByStartStationAndEndStation"
+            resultType="com.embracesource.traffic.forecast.dto.OfflineResultVO">
+        SELECT offr.start_station,
+               offr.current_station,
+               offr.end_station,
+               offr.n_station,
+               offr.a_num,
+               gis.name,
+               gis.latitude,
+               gis.longitude
+        FROM offline_result offr
+                 LEFT JOIN gis_station_clts_zd gis ON offr.current_station = gis.dblm
+        WHERE offr.start_station = #{startStation}
+          AND offr.end_station = #{endStation}
+    </select>
+
+    <select id="queryAllByStartStationAndEndStationAndCurrentStation"
+            resultType="com.embracesource.traffic.forecast.dto.OfflineResultVO">
+        SELECT offr.start_station,
+               offr.current_station,
+               offr.end_station,
+               offr.n_station,
+               offr.a_num,
+               gis.name,
+               gis.latitude,
+               gis.longitude
+        FROM offline_result offr
+                 LEFT JOIN gis_station_clts_zd gis ON offr.current_station = gis.dblm
+        WHERE offr.start_station = #{startStation}
+          AND offr.end_station = #{endStation}
+          AND offr.current_station = #{currentStation}
+    </select>
+</mapper>

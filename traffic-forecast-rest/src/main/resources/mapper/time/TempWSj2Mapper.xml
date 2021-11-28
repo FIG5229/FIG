@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.TempWSj2Dao">
+
+    <select id="selectTime" resultType="java.util.Map">
+        SELECT
+        	vsh."content",
+        	vsh.num
+        FROM
+        	view_sjts_head vsh
+        WHERE
+        	vsh.TYPE = #{type}
+    </select>
+
+    <select id="selectLastWeek" resultType="java.util.Map">
+        SELECT *
+        FROM
+            view_sjts_week
+    </select>
+
+    <select id="selectAllMessage" resultType="com.embracesource.traffic.time.dto.TempWSj2ResponseDTO">
+        SELECT
+        	car_no AS carNo,
+        	start_station AS startStation,
+        	current_station AS currentStation,
+        	end_station AS endStation,
+        	path_time_dd AS pathTimeDd,
+        	path_time_cf AS pathTimeCf,
+        	dd_minutes AS ddMinutes,
+        	fd_minutes AS fdMinutes,
+        	tl_minutes AS tlMinutes
+        FROM
+        	temp_w_sj_2
+        LIMIT 10
+    </select>
+    <select id="selectZdByCode" resultType="java.lang.String">
+        SELECT
+        	zm
+        FROM
+        	dic_station
+        WHERE
+        	dblm = #{startStation}
+    </select>
+    <select id="getTempWSj2TopTen" resultType="com.embracesource.traffic.screen.dto.TempWSj2TopTenResponseDTO">
+    select goods_type as "goodsType",
+    <!--avg(tl_minutes) as "tlMinutes"-->
+    (ROUND(CAST(avg(time) as numeric), 2)) as "tlMinutes"
+    from view_screen2_goods_type
+    where  time is not null
+    group by goods_type
+    order by (ROUND(CAST(avg(time) as numeric), 2)) desc
+    limit 10
+    </select>
+
+
+</mapper>

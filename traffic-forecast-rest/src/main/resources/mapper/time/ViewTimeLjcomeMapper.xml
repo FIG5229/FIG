@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.ViewTimeLjcomeDao">
+
+    <select id="getLjAccrate" resultType="com.embracesource.traffic.time.domain.ViewTimeLjcomeDo">
+        select *
+        from view_time_ljcome
+        where id = #{id} and station = #{station} and lj_name = #{ljName}
+    </select>
+
+    <select id="getLjAccrateList" resultType="com.embracesource.traffic.time.domain.ViewTimeLjcomeDo">
+        select *
+        from view_time_ljcome
+        where id = #{id} and station = #{station}
+    </select>
+
+</mapper>

@@ -1,0 +1,72 @@
+server:
+  port: 18080
+  tomcat:
+    max-http-form-post-size: -1
+    uri-encoding: UTF-8
+  servlet:
+    context-path: /traffic-forecast
+spring:
+  http:
+    encoding:
+      force: true
+      enabled: true
+      charset: UTF-8
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+  datasource:
+    dynamic:
+      primary: pgsql
+      datasource:
+        pgsql:
+          driver-class-name: org.postgresql.Driver
+          hikari:
+            auto-commit: true
+            connection-timeout: 30000
+            idle-timeout: 30000
+            max-lifetime: 1800000
+            maximum-pool-size: 20
+            minimum-idle: 10
+          url: jdbc:postgresql://10.3.72.119:9432/carflow?characterEncoding=UTF-8&prepareThreshold=0
+          username: analy
+          password: An@postgres.2020
+          type: com.zaxxer.hikari.HikariDataSource
+        clickhouse:
+          driverClassName: ru.yandex.clickhouse.ClickHouseDriver
+          hikari:
+            auto-commit: true
+            connection-timeout: 30000
+            idle-timeout: 30000
+            max-lifetime: 1800000
+            maximum-pool-size: 209*-
+            minimum-idle: 10
+          url: jdbc:clickhouse://10.3.65.67:8123/zwd_predict
+          type: com.zaxxer.hikari.HikariDataSource
+
+# 推算验证单独配置数据来源
+data:
+  driver: org.postgresql.Driver
+  url: jdbc:postgresql://10.3.72.119:5432/carflow?characterEncoding=UTF-8&prepareThreshold=0
+  username: analy
+  password: An@postgres.2020
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*/*Mapper.xml
+  type-aliases-package: com.embracesouce.*.domain
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+logging:
+  file:
+    path: log
+
+swagger:
+  enabled: false
+  type: all
+
+aop:
+  log:
+    enable: true

@@ -1,0 +1,92 @@
+server:
+  port: 18081
+  tomcat:
+    max-http-form-post-size: -1
+    uri-encoding: UTF-8
+  servlet:
+    context-path: /traffic-forecast
+spring:
+  http:
+    encoding:
+      force: true
+      enabled: true
+      charset: UTF-8
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+  datasource:
+    dynamic:
+      primary: pgsql
+      datasource:
+        pgsql:
+          driver-class-name: org.postgresql.Driver
+          hikari:
+            auto-commit: true
+            connection-timeout: 30000
+            idle-timeout: 30000
+            max-lifetime: 1800000
+            maximum-pool-size: 20
+            minimum-idle: 10
+          url: jdbc:postgresql://192.168.6.70:5432/carflow?characterEncoding=UTF-8&prepareThreshold=0&sslmode=require
+          username: postgres
+          password: postgres
+          type: com.zaxxer.hikari.HikariDataSource
+        clickhouse:
+          driverClassName: ru.yandex.clickhouse.ClickHouseDriver
+          hikari:
+            auto-commit: true
+            connection-timeout: 30000
+            idle-timeout: 30000
+            max-lifetime: 1800000
+            maximum-pool-size: 209*-
+            minimum-idle: 10
+          url: jdbc:clickhouse://192.168.6.17:8123/zwd_predict
+          username: default
+          password: ClickHouse_2020!
+          type: com.zaxxer.hikari.HikariDataSource
+#        clickhouse:
+#          driverClassName: ru.yandex.clickhouse.ClickHouseDriver
+#          hikari:
+#            auto-commit: true
+#            connection-timeout: 30000
+#            idle-timeout: 30000
+#            max-lifetime: 1800000
+#            maximum-pool-size: 209*-
+#            minimum-idle: 10
+#          url: jdbc:clickhouse://192.168.6.160:8123/carflow
+#          username: default
+#          password: redhat
+#          type: com.zaxxer.hikari.HikariDataSource
+
+# 推算验证单独配置数据来源
+data:
+  driver: org.postgresql.Driver
+  url: jdbc:postgresql://192.168.6.70:5432/carflow?characterEncoding=UTF-8&prepareThreshold=0&sslmode=require
+  username: postgres
+  password: postgres
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*/*Mapper.xml
+  type-aliases-package: com.embracesouce.*.domain
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+
+
+logging:
+  file:
+    path: log
+
+swagger:
+  enabled: true
+  basePackage: com.embracesource.traffic.admin.web;com.embracesource.traffic.screen.web;com.embracesource.traffic.forecast.web;com.embracesource.traffic.time.web
+
+aop:
+  log:
+    enable: true
+
+
+
+

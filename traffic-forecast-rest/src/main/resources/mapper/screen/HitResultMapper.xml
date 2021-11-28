@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.screen.dao.HitResultDao">
+    <select id="countAmount" resultType="java.lang.Long">
+        select count(1)
+        from hit_result hr
+        <where>
+            <if test="startTime != null ">and hr.report_time <![CDATA[ >= ]]> #{startTime}</if>
+            <if test="endTime != null ">and hr.report_time <![CDATA[ < ]]>  #{endTime}</if>
+        </where>
+    </select>
+    <select id="countErrorAmount" resultType="java.lang.Long">
+        select count(1)
+        from hit_result hr
+        <where>
+            hr.is_hit = '0'
+            <if test="startTime != null ">and hr.report_time <![CDATA[ >= ]]> #{startTime}</if>
+            <if test="endTime != null ">and hr.report_time <![CDATA[ < ]]>  #{endTime}</if>
+        </where>
+    </select>
+
+    <select id="countErrorAmountBeta" resultType="com.embracesource.traffic.screen.dto.CountInfoDTO">
+
+        <!--预测失败量-->
+        select count(1),substr(to_char(to_timestamp(cast(hr.report_time as bigint) / 1000),'yyyy-MM-dd'),6,5) as label
+        from hit_result hr
+        <where>
+            hr.is_hit = '0'
+            <if test="startTime != null ">and hr.report_time <![CDATA[ >= ]]> #{startTime}</if>
+            <if test="endTime != null ">and hr.report_time <![CDATA[ < ]]>  #{endTime}</if>
+        </where>
+        GROUP BY label
+        ORDER BY label DESC
+    </select>
+    <select id="queryErrorListTopTenByStartAndEnd" resultType="com.embracesource.traffic.screen.dto.TrainsErrorSiteDTO">
+        select hr.current_station, count(hr.current_station) as errorAmount
+        FROM hit_result hr
+        <where>
+            hr.is_hit = '0'
+            <if test="startTime != null ">and hr.report_time <![CDATA[ >= ]]> #{startTime}</if>
+            <if test="endTime != null ">and hr.report_time <![CDATA[ < ]]>  #{endTime}</if>
+        </where>
+        group by hr.current_station
+        order by errorAmount
+        limit 10 offset 0;
+    </select>
+
+
+    <select id="getHitResultList" resultType="com.embracesource.traffic.datamanage.dto.HitResultResponseDTO">
+     select hit_id as "hitId",
+     car_no as "carNo",
+     start_station as "startStation",
+     current_station as "currentStation",
+     end_station as "endStation",
+     goods_type as "goodsType",
+      to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH:mm:ss')  as "reportTime",
+     report_type as "reportType",
+     is_hit as "isHit"
+      from hit_result a
+     where
+     1=1
+     <if test="hitResultRequestDTO.carNo != null and hitResultRequestDTO.carNo != ''">
+        and a.car_no = #{hitResultRequestDTO.carNo}
+     </if>
+     <if test="hitResultRequestDTO.currentStation != null and hitResultRequestDTO.currentStation != ''">
+        and current_station = #{hitResultRequestDTO.currentStation}
+     </if>
+     <if test="hitResultRequestDTO.startStation != null and hitResultRequestDTO.startStation != ''">
+        and start_station = #{hitResultRequestDTO.startStation}
+     </if>
+     <if test="hitResultRequestDTO.endStation != null and hitResultRequestDTO.endStation != ''">
+        and end_station = #{hitResultRequestDTO.endStation}
+     </if>
+     limit ${pageSize} offset ${startIndex}
+    </select>
+
+    <select id="getUnusualForecastDataNumList" resultType="com.embracesource.traffic.screen.dto.UnusualForecastDataNumResponseDTO">
+        select b.month,COALESCE(a.num, 0) as "num" from
+        <foreach collection="list" separator="UNION" open="(" close=")" item="month">
+            SELECT #{month} as "month"
+        </foreach>
+        b left join
+        (
+            SELECT
+            to_char(to_timestamp(cast(c.report_time as bigint) / 1000),'yyyy-MM') as "month",count(*) as "num"
+            FROM hit_result c
+            where c.is_hit ='1'
+            GROUP BY to_char(to_timestamp(cast(c.report_time as bigint) / 1000),'yyyy-MM')
+        ) a on a.month = b.month
+        ORDER BY b.month desc limit 12
+    </select>
+
+    <select id="getUnusualForecastDataNumList_new" resultType="com.embracesource.traffic.screen.dto.UnusualForecastDataNumResponseDTO">
+        select a.days as "month",a.num as "num" from view_screen2_errdate_num a
+        ORDER BY a.days desc limit 12
+    </select>
+
+
+    <select id="getRealTimeModelInputNumber" resultType="java.util.Map">
+        select substring (b.mytime ,12) as "time",cast (COALESCE(c.num,0) as integer) as "num"
+        from
+        <foreach collection="beforeHour" open="(" item="myTime" separator="union" close=")">
+        select #{myTime} as "mytime"
+        </foreach> b
+        left join
+        (
+        select
+        to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00') as "mytime" ,
+        count(1) as "num"
+        from hit_result a
+        group by to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')
+        ) c on  b.mytime = c.mytime
+        ORDER BY b.mytime ASC
+    </select>
+    <select id="getRealTimeModelInputNumber_new" resultType="java.util.Map">
+        select '${format}' as "time" , count(1) as "num"
+        from hit_result a
+        where a.report_time >= #{now}  and a.report_time &lt; #{after}
+    </select>
+
+    <select id="getRealTimeModelPredictsNumber" resultType="java.util.Map">
+        select substring (b.mytime ,12) as "time",cast (COALESCE(c.num,0) as integer) as "num"
+        from
+        <foreach collection="beforeHour" open="(" item="myTime" separator="union" close=")">
+        select #{myTime} as "mytime"
+        </foreach> b
+        left join
+        (
+        select
+        to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00') as "mytime" ,
+        count(1) as "num"
+        from hit_result a
+        where a.current_station != a.end_station
+        group by to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')
+        ) c on  b.mytime = c.mytime
+        ORDER BY b.mytime ASC
+    </select>
+
+    <select id="getRealTimeModelPredictsNumber_new" resultType="java.util.Map">
+        select '${format}' as "time" , count(1) as "num"
+        from hit_result a
+        where
+        a.current_station != a.end_station
+        and a.report_time >= #{now}  and a.report_time &lt; #{after}
+    </select>
+
+    <select id="getRealTimeModelErrorNumber" resultType="java.util.Map">
+        select substring (b.mytime ,12) as "time",cast (COALESCE(c.num,0) as integer) as "num"
+        from
+        <foreach collection="beforeHour" open="(" item="myTime" separator="union" close=")">
+        select #{myTime} as "mytime"
+        </foreach> b
+        left join
+        (
+        select
+        to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00') as "mytime" ,
+        count(1) as "num"
+        from hit_result a
+        where a.is_hit = '0'
+        group by to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')
+        ) c on  b.mytime = c.mytime
+        ORDER BY b.mytime ASC
+    </select>
+
+    <select id="getRealTimeModelErrorNumber_new" resultType="java.util.Map">
+       select '${format}' as "time" ,count(1) as "num"
+        from hit_result a
+        where a.is_hit = '0'
+        and a.report_time >= #{now}  and a.report_time &lt; #{after}
+
+    </select>
+
+    <select id="getHitResultListCount" resultType="java.lang.Integer">
+    select count(*)
+      from hit_result a
+     where
+     1=1
+     <if test="carNo != null and carNo != ''">
+        and a.car_no = #{carNo}
+     </if>
+     <if test="currentStation != null and currentStation != ''">
+        and current_station = #{currentStation}
+     </if>
+     <if test="startStation != null and startStation != ''">
+        and start_station = #{startStation}
+     </if>
+     <if test="endStation != null and endStation != ''">
+        and end_station = #{endStation}
+     </if>
+    </select>
+
+    <select id="getRealTimeModelInputNumberByTimeSlot" resultType="java.util.Map">
+        select substr(to_char(report_time,'yyyy-mm-dd HH24:00:00'),1,16) as "time",
+        count(1) as "num"
+        from car_result_info_history
+        <!-- where report_time >= '2021-03-09 00:00' and report_time &lt;'2021-03-10 00:00'-->
+        where report_time >= '${beforeTime}' and report_time &lt;'${nowTime}'
+        group by substr(to_char(report_time,'yyyy-mm-dd HH24:00:00'),1,16)
+        ORDER BY substr(to_char(report_time,'yyyy-mm-dd HH24:00:00'),1,16)
+    </select>
+
+    <select id="getRealTimeModelPredictsByTimeSlot" resultType="java.util.Map">
+        select to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')  as "time",
+        count(1) as "num"
+        from hit_result a
+        <!--where report_time &gt;= '1611676800'  and report_time  &lt; '1611763200'-->
+        where report_time &gt;= '${beforeTime}'  and report_time  &lt; '${nowTime}'
+        group by to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')
+        order by to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')
+    </select>
+
+    <select id="getRealTimeModelErrorNumberByTimeSlot" resultType="java.util.Map">
+        select to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00') as "time" ,
+        count(1) as "num"
+        from hit_result a
+        <!-- where report_time >= '1611676800'  and report_time  &lt; '1611763200'-->
+        where report_time &gt;= '${beforeTime}'  and report_time  &lt; '${nowTime}'
+        and is_hit = '0'
+        group by to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')
+        order by to_char(to_timestamp(cast(a.report_time as bigint) / 1000),'yyyy-MM-dd HH24:00')
+    </select>
+
+    <select id="getTotalStatisticsList"
+            resultType="com.embracesource.traffic.screen.dto.TotalStatisticsResponseDTO">
+        select title,content from view_total_statistics
+    </select>
+</mapper>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.forecast.dao.OfflineLzjDao">
+    <select id="queryByCurrentStationAndNStation" resultType="com.embracesource.traffic.forecast.domain.OfflineLzjDO">
+        SELECT lzj.current_station,lzj.n_station, lzj.nodes_lz from offline_lzj lzj where
+        concat_ws('',lzj.current_station,lzj.n_station) in
+        <foreach collection="list" item="key" index="keys" open="(" close=")" separator=",">
+            #{key}
+        </foreach>
+    </select>
+</mapper>

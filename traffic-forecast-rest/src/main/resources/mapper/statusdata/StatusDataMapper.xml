@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.datamanage.dao.StatusDataDao">
+
+    <select id="getTimeCareInfoByPage" resultType="com.embracesource.traffic.datamanage.dto.StatusDataResponseDTO">
+        select
+            tbrq AS tbrq,
+            car_no AS carNo,
+            org_stn AS orgStn,
+            cur_stn AS curStn,
+            dest_stn AS destStn,
+            cdy_code AS cdyCode,
+            rpt_date AS rptDte,
+            rpt_id AS rptId,
+            train_no AS trainNo,
+            le_code AS leCode
+        from
+            clts_zyxcz
+         where
+         tbrq &gt;= #{date}
+        <if test="wagonNumber != null and wagonNumber != '' ">
+            and car_no = #{wagonNumber}
+        </if>
+        <if test="startingStand != null and startingStand != '' ">
+            and org_stn = #{startingStand}
+        </if>
+        <if test="currentStand != null and currentStand != '' ">
+            and cur_stn = #{currentStand}
+        </if>
+        <if test="endStand != null and endStand != '' ">
+            and dest_stn = #{endStand}
+        </if>
+            limit #{getPageSize} offset #{newPage}
+    </select>
+
+    <select id="getTimeCareInfo" resultType="com.embracesource.traffic.datamanage.domain.StatusDataDO">
+        select
+            *
+        from
+            clts_zyxcz
+        where
+        tbrq > #{date}
+        <if test="wagonNumber != null and wagonNumber != '' ">
+         and car_no = #{wagonNumber}
+        </if>
+        <if test="startingStand != null and startingStand != '' ">
+            and org_stn = #{startingStand}
+        </if>
+        <if test="currentStand != null and currentStand != '' ">
+            and cur_stn = #{currentStand}
+        </if>
+        <if test="endStand != null and endStand != '' ">
+            and dest_stn = #{endStand}
+        </if>
+    </select>
+
+    <select id="getTimeCareInfoCount" resultType="java.lang.Integer">
+        select
+            count(1)
+        from
+            clts_zyxcz
+        where
+        tbrq > #{date}
+        <if test="wagonNumber != null and wagonNumber != '' ">
+         and car_no = #{wagonNumber}
+        </if>
+        <if test="startingStand != null and startingStand != '' ">
+            and org_stn = #{startingStand}
+        </if>
+        <if test="currentStand != null and currentStand != '' ">
+            and cur_stn = #{currentStand}
+        </if>
+        <if test="endStand != null and endStand != '' ">
+            and dest_stn = #{endStand}
+        </if>
+    </select>
+
+
+</mapper>

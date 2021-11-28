@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.ViewTempHitResultDao">
+    <select id="queryHitResultDOByTableNameAndVid"
+            resultType="com.embracesource.traffic.time.domain.ViewTempHitResultDO">
+        select *
+        from
+        (
+            select current_station, report_type, report_time,
+                (
+                    case
+                    when path_time is not null then path_time
+                    when path_time is null then report_time end
+                )as path_time
+            from ${tabName}
+            where v_id = #{vId}
+        )A order by path_time
+    </select>
+</mapper>

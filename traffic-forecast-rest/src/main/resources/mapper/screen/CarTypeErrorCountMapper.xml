@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.screen.dao.CarTypeErrorCountDao">
+
+   <select id="countAbnormalDataVolume" resultType="com.embracesource.traffic.screen.dto.CountInfoDTO">
+       select count(1), substr(report_time,5,2)||'-'||substr(report_time,7,2) as label
+       from car_type_error_count
+       where
+       report_time &gt;= #{startTime}
+       and report_time &lt; #{endTime}
+       and rule != ''
+       group by label
+       order by label DESC
+   </select>
+
+    <select id="countAbnormalDataVolumeByDay" resultType="long">
+       select count(1)
+       from car_type_error_count
+       where
+       report_time &gt;= #{startTime}
+       and report_time &lt; #{endTime}
+       and rule != ''
+   </select>
+
+    <select id="countTotalDataVolume" resultType="long">
+        select count(1)
+        from
+            car_type_error_count
+        where
+            report_time &gt;= to_char(now() ,'YYYYMMDD000000')
+            and   report_time &lt; to_char(now() ,'YYYYMMDDhh24miss')
+    </select>
+
+    <select id="countExceptionalDataInspectionRules" resultType="com.embracesource.traffic.screen.dto.CountInfoDTO">
+        <!--异常数据稽查规则-->
+        SELECT RULE as label
+        ,
+        COUNT ( 1 )
+        FROM
+        car_type_error_count
+        WHERE
+
+         <!--
+       report_time &gt;= to_char( now( ), 'YYYYMMDD000000' )
+        AND report_time &lt; to_char( now( ), 'YYYYMMDDhh24miss' )
+        -->
+        report_time &gt;= '2021-06-24 00:00'
+        AND report_time &lt; '2021-06-24 23:00'
+        AND RULE != ''
+        GROUP BY
+        RULE
+    </select>
+
+</mapper>

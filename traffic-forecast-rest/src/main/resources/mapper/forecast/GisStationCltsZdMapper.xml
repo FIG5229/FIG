@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.forecast.dao.GisStationCltsZdDao">
+
+
+    <select id="findByName" resultType="com.embracesource.traffic.forecast.domain.GisStationCltsZdDO">
+        select *
+        from gis_station_clts_zd zd
+        where zd.name = #{name}
+    </select>
+
+    <select id="findAllByNameIn" resultType="com.embracesource.traffic.forecast.domain.GisStationCltsZdDO">
+        select * from gis_station_clts_zd zd where zd.name in
+        <foreach collection="list" item="name" index="names" open="(" close=")" separator=",">
+            #{name}
+        </foreach>
+    </select>
+
+    <select id="findAllByDblmIn" resultType="com.embracesource.traffic.forecast.domain.GisStationCltsZdDO">
+        select * from gis_station_clts_zd zd where zd.dblm in
+        <foreach collection="list" item="name" index="names" open="(" close=")" separator=",">
+            #{name}
+        </foreach>
+    </select>
+</mapper>

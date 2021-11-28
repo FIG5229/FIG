@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.ViewTimeErrorResultDao">
+
+    <select id="getAccrate" resultType="com.embracesource.traffic.time.domain.ViewTimeErrorResultDo">
+        select *
+        from view_time_error_result
+        where id = #{id}
+    </select>
+
+
+    <select id="getCarCount" parameterType="java.sql.Timestamp"  resultType="java.lang.Long">
+        select count(1)
+        from
+        (select car_no
+        from car_result_info_history
+        where report_time >= #{zeroDate} and report_time &lt; #{nowDate}
+        and lecode = '1'
+        group by car_no
+        ) t
+    </select>
+
+    <select id="getLeaveCount" parameterType="java.sql.Timestamp" resultType="java.lang.Long">
+        select count(1)
+        from car_result_info_history
+        where report_time >= #{zeroDate}
+        and report_time &lt; #{nowDate}
+        and lecode = '1' and report_type = 'LCCF'
+    </select>
+
+    <select id="getArriveCount" parameterType="java.sql.Timestamp" resultType="java.lang.Long">
+        select count(1)
+        from car_result_info_history
+        where report_time >= #{zeroDate}
+        and report_time &lt; #{nowDate}
+        and lecode = '1' and report_type = 'LCDD'
+    </select>
+
+
+    <select id="getCount" resultType="com.embracesource.traffic.time.domain.ViewTimePageNumDo">
+        select day_car_num,day_dd_num,day_cf_num
+        from view_time_page_num
+    </select>
+
+</mapper>

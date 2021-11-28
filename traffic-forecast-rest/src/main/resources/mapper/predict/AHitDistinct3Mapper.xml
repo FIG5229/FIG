@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.predict.dao.AHitDistinct3Dao">
+    <select id="countOffLinePredictHitRate" resultType="map">
+        select  d.ljqc as label,sum(cast(is_hit as int)) as is_count,count(1) as all_count
+        from a_hit_distinct_3 a
+        left join view_ljzd d on d.ljpym = a.ljpym
+        where a.report_time &gt;= '${startTime}' and a.report_time &lt; '${endTime}' and a.ljpym is not null
+        GROUP BY ljqc
+    </select>
+
+    <select id="countOffLinePredictAccuracy" resultType="map">
+        SELECT
+            d.ljqc,
+            SUM ( CASE WHEN cnt = hit_cnt THEN 1 ELSE 0 END ) AS is_count,
+            COUNT ( 1 ) AS all_count
+        FROM
+            (
+            SELECT
+                ljpym,
+                COUNT ( 1 ) AS cnt,
+                SUM ( CAST ( is_hit AS INT ) ) AS hit_cnt
+            FROM
+                a_hit_distinct_3
+            where report_time &gt;= '${startTime}' and report_time &lt; '${endTime}'
+            and a_hit_distinct_3.ljpym is not null
+            GROUP BY
+                start_station,
+                end_station,
+                goods_type,
+                car_no,
+                ljpym
+            ) T
+            left join view_ljzd d on d.ljpym = T.ljpym
+        GROUP BY ljqc
+    </select>
+</mapper>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.XczSjCntDao">
+    <select id="getAmountByStation" resultType="java.lang.Long">
+        select sj_dd
+        from xcz_sj_cnt
+        where xcz = #{station}
+    </select>
+</mapper>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.ViewTimeLjDao">
+    <select id="getAllLjAccrate" resultType="com.embracesource.traffic.time.domain.ViewTimeLjDo">
+        select *
+        from view_time_lj
+        where id = #{id}
+          and station = #{station}
+    </select>
+
+    <select id="getAllStationAllLjAccrate" resultType="com.embracesource.traffic.time.domain.ViewTimeLjDo">
+        select *
+        from view_time_lj
+        where id = #{id}
+    </select>
+
+    <select id="getCoordinateBZZ" resultType="com.embracesource.traffic.time.dto.CoordinateDTO">
+        select longitude, latitude
+        from view_jwd_bzz
+        where dblm = #{station}
+    </select>
+
+    <select id="getCoordinateXCZ" resultType="com.embracesource.traffic.time.dto.CoordinateDTO">
+        select longitude, latitude
+        from view_jwd_xcz
+        where dblm = #{station}
+    </select>
+
+    <select id="queryCoordinateXCZ" resultType="com.embracesource.traffic.time.dto.CoordinateDTO">
+        select longitude, latitude, dblm
+        from view_jwd_xcz
+                where dblm in
+        <foreach collection="stationSet" item="item" index="items" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+    <select id="queryCoordinateBZZ" resultType="com.embracesource.traffic.time.dto.CoordinateDTO">
+        select longitude, latitude, dblm
+        from view_jwd_bzz
+                where dblm in
+        <foreach collection="stationSet" item="item" index="items" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+</mapper>

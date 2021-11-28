@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.predict.dao.AHitDistinct2Dao">
+    <select id="countOffLineHitRate" resultType="map">
+    SELECT
+	     is_count  ,all_count
+    FROM
+        (SELECT
+            (SELECT COUNT ( 1 ) AS is_count FROM a_hit_distinct_2   WHERE is_hit = '1'
+            and report_time &gt;= '${startTime}' and report_time &lt; '${endTime}'),
+            COUNT ( 1 ) AS all_count
+        FROM a_hit_distinct_2
+        ) A
+    </select>
+
+        <!--准确率-->
+    <select id="countOffLineAccuracy" resultType="map">
+        SELECT
+             is_count  ,all_count
+        FROM
+            (
+            SELECT SUM
+                ( CASE WHEN cnt = hit_cnt THEN 1 ELSE 0 END ) AS is_count,
+                COUNT ( 1 ) AS all_count
+            FROM
+                (
+                SELECT COUNT
+                    ( * ) AS cnt,
+                    SUM ( CAST ( is_hit AS INT ) ) AS hit_cnt
+                FROM
+                    a_hit_distinct_2
+                where report_time &gt;= '${startTime}' and report_time &lt; '${endTime}'
+                GROUP BY
+                    start_station,
+                    end_station,
+                    goods_type,
+                    car_no
+                ) AS A
+            ) b
+    </select>
+
+    <!--离线 异常预测站点分布 -->
+    <select id="countOffLineDistributionAnomalyPredictionSitesTop" resultType="com.embracesource.traffic.screen.dto.CountInfoDTO">
+        SELECT
+            current_station as label ,
+            COUNT ( 1 )
+        FROM    a_hit_distinct_2 A
+        WHERE
+        A.report_time &gt;= '${startTime}'
+        AND A.report_time &lt; '${endTime}'
+        AND is_hit = '0'
+        GROUP BY
+        current_station
+        ORDER BY
+        COUNT ( 1 ) DESC
+    </select>
+
+    <select id="countOffLinePredictNum" resultType="long">
+            SELECT COUNT( 1 )
+            FROM
+                a_hit_distinct_2 A
+            WHERE
+                A.report_time &gt;= '${startTime}'
+                AND A.report_time &lt; '${endTime}'
+            <if test="isHit != null and isHit != ''">
+                AND is_hit = #{isHit}
+            </if>
+
+    </select>
+
+    <!--统计每天的准确率-->
+    <select id="countOffLineAccuracyDay" resultType="map">
+        SELECT
+	round( is_count :: NUMERIC / all_count :: NUMERIC, 2 ) ,  report_time
+FROM
+	(
+	SELECT SUM
+		( CASE WHEN cnt = hit_cnt THEN 1 ELSE 0 END ) AS is_count,
+		COUNT ( 1 ) AS all_count ,
+		 report_time
+	FROM
+		(
+		SELECT COUNT
+			( 1 ) AS cnt,
+			SUM ( CAST ( is_hit AS INT ) ) AS hit_cnt ,
+			report_time
+		FROM
+			(select start_station,end_station,goods_type,car_no ,is_hit ,
+			to_char( to_timestamp( CAST ( report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd' ) as report_time
+			from a_hit_distinct_2
+			where report_time &gt;= '${startTime}' and report_time &lt; '${endTime}'
+			) as sdf
+		GROUP BY
+			start_station,
+			end_station,
+			goods_type,
+			car_no ,
+			report_time
+		) AS A
+
+	GROUP BY report_time
+
+	) b
+
+    </select>
+</mapper>

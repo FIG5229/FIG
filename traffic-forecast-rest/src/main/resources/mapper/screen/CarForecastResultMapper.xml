@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.screen.dao.CarForecastResultDao">
+
+    <select id="getCarForecastByKeyAndField"
+            resultType="com.embracesource.traffic.screen.domain.CarForecastResultDO">
+        select * from car_forecast_result cfr
+        <where>
+            <if test="key !=null">and cfr.key=#{key}</if>
+            <if test="field !=null">and cfr.field=#{field}</if>
+        </where>
+    </select>
+
+    <select id="queryCarForecastByKeyAndFields"
+            resultType="com.embracesource.traffic.screen.domain.CarForecastResultDO">
+        select * from car_forecast_result cfr
+        <where>
+            <if test="key !=null">and cfr.key=#{key}</if>
+            <if test="fields !=null">and cfr.field in
+                <foreach item="item" index="index" collection="fields" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <select id="queryCarForecastByKeysAndField"
+            resultType="com.embracesource.traffic.screen.domain.CarForecastResultDO">
+        select * from car_forecast_result cfr
+        <where>
+            <if test="field !=null">and cfr.field=#{field}</if>
+            <if test="keys !=null">and cfr.key in
+                <foreach item="item" index="index" collection="keys" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </select>
+</mapper>

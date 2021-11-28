@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.screen.dao.CarResultInfoHistoryDao">
+
+    <select id="countByStartDateAndEndDate" resultType="java.lang.Long">
+        select count(*)
+        from car_result_info_history crih
+        where crih.report_time <![CDATA[ >= ]]> #{startTime}
+          and crih.report_time <![CDATA[ < ]]>  #{endTime}
+    </select>
+    <select id="queryListByNowDayDate"
+            resultType="com.embracesource.traffic.screen.domain.CarResultInfoHistory">
+        select report_time,car_no,start_station,current_station,end_station
+        from car_result_info_history crih
+        <where>
+            <if test="startTime != null">and crih.report_time <![CDATA[ >= ]]> #{startTime}</if>
+            <if test="endTime != null">and crih.report_time <![CDATA[ < ]]>  #{endTime}</if>
+        </where>
+    </select>
+    <select id="countCarNoByNowDayDate" resultType="java.lang.Long">
+        SELECT COUNT(1) FROM
+        (SELECT crih.car_no FROM car_result_info_history crih
+        <where>
+            <if test="startTime != null">and crih.report_time <![CDATA[ >= ]]> #{startTime}</if>
+            <if test="endTime != null">and crih.report_time <![CDATA[ < ]]>  #{endTime}</if>
+            group by car_no
+        </where>
+        ) as a
+    </select>
+    <select id="countPredictsByStartDateAndEndDate" resultType="java.lang.Long">
+        select count(1)
+        from car_result_info_history crih
+        where crih.report_time <![CDATA[ >= ]]> #{startTime}
+          and crih.report_time <![CDATA[ < ]]>  #{endTime}
+          <!--and crih.current_station != end_station-->
+    </select>
+
+    <!--小时统计预测查询 开始时间到结束时间的每小时-->
+    <select id="getHourForecastList" resultType="com.embracesource.traffic.screen.dto.CountInfoDTO">
+        select to_char( report_time , 'yyyy-MM-dd HH24' )as label,count(1)
+        FROM car_result_info_history
+        WHERE
+        report_time &gt;= '${startDate}'
+        AND report_time &lt; '${endDate}'
+        GROUP BY to_char( report_time , 'yyyy-MM-dd HH24' )
+        ORDER BY to_char( report_time , 'yyyy-MM-dd HH24' )
+      <!--
+       SELECT COUNT( 1 ) ,report_time as label
+        FROM
+        (select to_char( report_time , 'yyyy-MM-dd HH24' )as report_time from car_result_info_history)as dfs
+        WHERE
+        report_time &gt;= '${startDate}'
+        AND report_time &lt; '${endDate}'
+        GROUP BY report_time
+        ORDER BY report_time
+        -->
+    </select>
+    <select id="queryListByTopK_new" resultType="com.embracesource.traffic.screen.dto.VehicleRunningStatusNewDTO">
+        select crih.car_no        as carNo,
+               gscz.zm          as currentName,
+               crih.nodes_info    as estimatedTimeArrival,
+               crih.start_station as startStation,
+               crih.end_station   as endStation,
+               crih.goods_type    as goodsType,
+               crih.report_time   as reportTime
+        from car_result_info_history crih
+        left join view_dic_station gscz on gscz.dblm = crih.current_station
+        where crih.result_source = '1'
+        order by create_time DESC
+        limit #{topk} offset 0
+    </select>
+    <select id="queryListByTopK_new2" resultType="com.embracesource.traffic.screen.dto.VehicleRunningStatusNewDTO">
+        select a.car_no        as carNo,
+               b.zm          as currentName,
+               a.nodes_info    as estimatedTimeArrival,
+               a.start_station as startStation,
+               a.end_station   as endStation,
+               a.goods_type    as goodsType,
+               a.report_time   as reportTime
+        from car_result_info_history a left join view_dic_station b on a.current_station = b.dblm where a.result_source = '1'
+        and a.report_time &gt;= '${format}' order by create_time desc  limit #{topk} offset 0
+    </select>
+
+    <select id="queryListByTopK" resultType="com.embracesource.traffic.screen.dto.VehicleRunningStatusDTO">
+        select crih.car_no        as carNo,
+               gscz.name          as currentName,
+               crih.nodes_info    as estimatedTimeArrival,
+               crih.start_station as startStation,
+               crih.end_station   as endStation,
+               crih.goods_type    as goodsType
+        from car_result_info_history crih
+                 left join gis_station_clts_zd gscz on gscz.dblm = crih.current_station
+        where crih.result_source = '1'
+        order by create_time DESC
+        limit #{topk} offset 0
+    </select>
+    <select id="queryListByCarNoAndStartAndEndAndGoodType"
+            resultType="com.embracesource.traffic.screen.dto.VehicleRunningStatusDTO">
+        select crih.car_no     as carNo,
+               gscz.name       as currentName,
+               crih.nodes_info as estimatedTimeArrival
+        from car_result_info_history crih
+                 left join gis_station_clts_zd gscz on gscz.dblm = crih.current_station
+        where crih.result_source = '1'
+          and crih.car_no = #{carNo}
+          and crih.start_station = #{startStation}
+          and crih.end_station = #{endStation}
+          and crih.goods_type = #{goodsType}
+        order by create_time
+    </select>
+
+    <select id="countDataHandlingCapacityDay" resultType="com.embracesource.traffic.screen.dto.DataCountInfoDTO">
+        select report_type as reportType ,count(1) ,substr(to_char(report_time,'yyyy-mm-dd hh24:mi:ss'),6,5)  as label
+        from car_result_info_history
+        where   report_time &gt;=  #{startTime} and report_time &lt; #{endTime}
+        and report_type  in ( 'CHSB', 'LCCF', 'LCDD' )
+        group by substr(to_char(report_time,'yyyy-mm-dd hh24:mi:ss'),6,5) ,report_type
+        ORDER BY label desc
+    </select>
+
+    <select id="getDataHandlingCapacityDay" resultType="long">
+        select count(1)
+        from car_type_error_count
+        where report_time &gt;= #{startTime} and   report_time &lt; #{endTime} and rule != ''
+    </select>
+
+    <select id="queryListPredict" resultType="com.embracesource.traffic.screen.dto.PredictCarResultDTO">
+        select
+            item_id as itemId,
+            car_no as carNo,
+            start_station as startStation,
+            current_station as currentStation,
+            end_station as endStation,
+            goods_type as goodsType,
+            report_time as reportTime,
+            report_type as reportType,
+            train_no as trainNo,
+            lecode as lecode
+        from car_result_info_history
+        where report_time &gt;= #{startTime}  and report_time &lt; #{endTime}
+        <if test="carResult.carNo != null and carResult.carNo != ''">
+            and car_no  = #{carResult.carNo}
+        </if>
+        <if test="carResult.endStation != null and carResult.endStation != ''">
+            and end_station  = #{carResult.endStation}
+        </if>
+        <if test="carResult.currentStation != null and carResult.currentStation != ''">
+            and current_station  = #{carResult.currentStation}
+        </if>
+        <if test="carResult.startStation != null and carResult.startStation != ''">
+            and start_station  = #{carResult.startStation}
+        </if>
+        order by report_time,item_id
+    </select>
+    
+    <select id="countCanalTraffic" resultType="map">
+        SELECT
+        d.ljqc as label,
+        COUNT ( 1 )
+        FROM
+        (
+        SELECT A
+        .*,
+        b.ljpym
+        FROM
+        car_result_info_history A
+        LEFT JOIN view_dic_station b ON A.current_station = b.dblm
+        WHERE
+        A.report_time &gt;= CAST ( to_char( now( ), 'YYYY-MM-DD 00:00:00' ) AS TIMESTAMP )
+        AND A.report_time &lt; CAST ( to_char( now( ), 'YYYY-MM-DD HH24:mi:ss' ) AS TIMESTAMP )
+        ) T
+        left join view_ljzd d on d.ljpym = T.ljpym
+        where T.ljpym is not null
+        GROUP BY
+        d.ljqc
+    </select>
+
+    <select id="getSitTrafficToday" resultType="int">
+        select count(1) from car_result_info_history a
+        where  a.report_time &gt;= cast (to_char(now() ,'YYYY-MM-DD 00:00:00')  as   TIMESTAMP)
+        and a.report_time &lt; cast (to_char(now() ,'YYYY-MM-DD HH24:mi:ss')  as   TIMESTAMP)
+    </select>
+    <select id="getSitTrafficTopTen" resultType="com.embracesource.traffic.screen.dto.SitTrafficTopTenResponseDTO">
+        select vds.zm as "currentStation",
+        count(1) as "num",
+        <choose>
+        <when test="totalNum != null and totalNum != 0">
+        concat(round((count(1)*1.0/${totalNum})*100,2) , '%') as "percent",
+        </when>
+        <otherwise>
+        '0.00%' as "percent",
+        </otherwise>
+        </choose>
+        '${totalNum}' as "totalNum"
+        from car_result_info_history a
+        LEFT JOIN view_dic_station vds  on   a.current_station = vds.dblm
+        where  a.report_time &gt;= cast (to_char(now() ,'YYYY-MM-DD 00:00:00')  as   TIMESTAMP)
+        and a.report_time &lt; cast (to_char(now() ,'YYYY-MM-DD HH24:mi:ss')  as   TIMESTAMP)
+        group by a.current_station,vds.zm order by count(1) desc limit 10
+    </select>
+
+</mapper>

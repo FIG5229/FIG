@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.predict.dao.AHitDistinctDao">
+
+    <!--实时预测命中率-->
+    <select id="countPredictHitRate" resultType="map">
+      select is_count,all_count
+      from (
+        select
+            (select count(1) as is_count from <include refid="a_hit_distinct_2"/> as aHit2 where aHit2.is_hit = '1'),
+            count(1) as all_count from  <include refid="a_hit_distinct_2"/> as aHitDis2
+        ) a
+        where a.all_count != 0
+    </select>
+    <select id="countPredictAccuracy" resultType="map">
+       SELECT
+            is_count  , all_count
+        FROM
+            (
+            SELECT SUM
+                ( CASE WHEN cnt = hit_cnt THEN 1 ELSE 0 END ) AS is_count,
+                COUNT ( 1 ) AS all_count
+            FROM
+                (
+                SELECT COUNT
+                    ( 1 ) AS cnt,
+                    SUM ( CAST ( is_hit AS INT ) ) AS hit_cnt
+                FROM
+                    <include refid="a_hit_distinct_2"/> as aHit2
+                GROUP BY
+                    start_station,
+                    end_station,
+                    goods_type,
+                    car_no
+                ) AS A
+            ) b
+            where b.all_count &lt;&gt; 0
+    </select>
+
+    <select id="countOnLinePredictNum" resultType="long">
+        SELECT COUNT
+        ( 1 )
+        FROM
+        <include refid="a_hit_distinct_2"/> A
+        WHERE
+        A.report_time &gt;= '${startTime}'
+        and A.report_time &lt; '${endTime}'
+        <if test="isHit != null and isHit != ''">
+            AND is_hit = #{isHit}
+        </if>
+    </select>
+
+   <!-- <select id="countDistributionAnomalyPredictionSitesTop" resultType="com.embracesource.traffic.screen.dto.CountInfoDTO">
+        &lt;!&ndash;异常预测站点分布   应该计算上一站？&ndash;&gt;
+        SELECT
+        current_station as label ,
+        COUNT ( 1 )
+        FROM
+        a_hit_distinct_2 A
+        WHERE
+        to_char( to_timestamp( CAST ( A.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) &gt;= to_char( now( ), 'YYYY-MM-DD 00:00:00' )
+        AND to_char( to_timestamp( CAST ( A.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) &lt; to_char( now( ), 'YYYY-MM-DD HH24:mi:ss' )
+        AND is_hit = '0'
+        GROUP BY
+        current_station
+        ORDER BY
+        COUNT ( 1 ) DESC
+    </select>-->
+
+
+
+    <select id="countDistributionAnomalyPredictionSitesTop" resultType="com.embracesource.traffic.screen.dto.CountInfoDTO">
+         SELECT
+        current_station as label ,
+        COUNT ( 1 )
+        FROM
+        <include refid="a_hit_distinct_2"/> A
+        WHERE
+        to_char( to_timestamp( CAST ( A.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) &gt;= to_char( #{startTime}, 'YYYY-MM-DD 00:00:00' )
+        AND to_char( to_timestamp( CAST ( A.report_time AS BIGINT ) / 1000 ), 'yyyy-MM-dd HH24:MI:SS' ) &lt; to_char( #{endTime}, 'YYYY-MM-DD HH24:mi:ss' )
+        AND is_hit = '0'
+        GROUP BY
+        current_station
+        ORDER BY
+        COUNT ( 1 ) DESC
+    </select>
+
+    <select id="queryPredictHitDistinct2" resultType="com.embracesource.traffic.predict.domain.AHitDistinct2">
+        (
+        SELECT
+        start_station as startStation,
+        end_station as endStation,
+        goods_type as goodsType,
+        car_no as carNo,
+        current_station as currentStation,
+        report_type as reportType,
+        path_time as pathTime,
+        report_time as reportTime,
+        is_hit as isHit
+        FROM (
+        SELECT A.start_station ,A.end_station ,A.goods_type ,A.car_no ,A.current_station ,A.report_type ,A.path_time ,A.report_time ,A.is_hit,
+        ROW_NUMBER() OVER (PARTITION BY  start_station,end_station,goods_type,car_no ORDER BY a.report_time ) RN
+        FROM (
+        SELECT A.start_station ,A.end_station ,A.goods_type ,A.car_no ,A.current_station ,A.report_type ,A.path_time ,A.report_time ,A.is_hit
+        FROM(
+        SELECT a_hit.start_station ,a_hit.end_station ,a_hit.goods_type ,a_hit.car_no ,a_hit.current_station ,a_hit.report_type ,a_hit.path_time ,a_hit.report_time ,a_hit.is_hit,a_hit.hit_id
+        FROM
+        hit_result a_hit
+        WHERE
+        a_hit.report_time &gt;= '${startTime}'
+        AND a_hit.report_time &lt; '${endTime}'
+        ) AS A,
+        (
+        SELECT
+        a_car.item_id,a_car.result_source
+        FROM
+        car_result_info_history a_car
+        WHERE
+        a_car.report_time &gt;= #{startDate} and a_car.report_time &lt; #{endDate}
+        ) b
+        WHERE
+        A.hit_id = b.item_id
+        AND b.result_source = '1') as  A
+        where end_station!='()' and start_station!='()'  and end_station!= '000' and start_station != '000'
+        ) as B
+        WHERE RN !=1
+        group by start_station,end_station,goods_type,car_no,current_station,report_type,path_time,report_time,is_hit
+        )
+    </select>
+    <select id="queryPredictHitDistinct3" resultType="com.embracesource.traffic.predict.domain.AHitDistinct3">
+        select
+        a.start_station as startStation,
+        a.end_station as endStation,
+        a.goods_type as goodsType,
+        a.car_no as carNo,
+        a.current_station as currentStation,
+        a.report_type as reportType,
+        a.path_time as pathTime,
+        a.report_time as reportTime,
+        a.is_hit as isHit,
+        b.ljpym
+        from <include refid="a_hit_distinct_2"/> a
+        left join dic_station b on a.current_station = b.dblm
+    </select>
+    <sql id="a_hit_distinct_2">
+        <!--查询出的数据放到a_hit_distinct_2中作为一个结果集供别的地方调用
+        a_hit_distinct_2-->
+        (
+        SELECT start_station,end_station,goods_type,car_no,current_station,report_type,path_time,report_time,is_hit
+        FROM (
+        SELECT A.start_station ,A.end_station ,A.goods_type ,A.car_no ,A.current_station ,A.report_type ,A.path_time ,A.report_time ,A.is_hit,
+        ROW_NUMBER() OVER (PARTITION BY  start_station,end_station,goods_type,car_no ORDER BY a.report_time ) RN
+        FROM (
+        SELECT A.start_station ,A.end_station ,A.goods_type ,A.car_no ,A.current_station ,A.report_type ,A.path_time ,A.report_time ,A.is_hit
+        FROM(
+        SELECT a_hit.start_station ,a_hit.end_station ,a_hit.goods_type ,a_hit.car_no ,a_hit.current_station ,a_hit.report_type ,a_hit.path_time ,a_hit.report_time ,a_hit.is_hit,a_hit.hit_id
+        FROM
+        hit_result a_hit
+        WHERE
+        a_hit.report_time &gt;= '${startTime}'
+        AND a_hit.report_time &lt; '${endTime}'
+        ) AS A,
+        (
+        SELECT
+        a_car.item_id,a_car.result_source
+        FROM
+        car_result_info_history a_car
+        WHERE
+        a_car.report_time &gt;= #{startDate} and a_car.report_time &lt; #{endDate}
+        ) b
+        WHERE
+        A.hit_id = b.item_id
+        AND b.result_source = '1') as  A
+        where end_station!='()' and start_station!='()'  and end_station!= '000' and start_station != '000'
+        ) as B
+        WHERE RN !=1
+        group by start_station,end_station,goods_type,car_no,current_station,report_type,path_time,report_time,is_hit
+        )
+    </sql>
+
+    <sql id="a_hit_distinct3">
+        (
+            select a.*,b.ljpym
+            from <include refid="a_hit_distinct_2"/> a
+            left join dic_station b on a.current_station = b.dblm
+        )
+    </sql>
+
+</mapper>

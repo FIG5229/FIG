@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.embracesource.traffic.time.dao.ViewTimeCarInfoDao">
+    <select id="getTimeCareInfo" resultType="com.embracesource.traffic.time.domain.ViewTimeCarInfoDo">
+        select A.hit_id,
+               A.lybj,
+               A.sjbj,
+               A.v_cur,
+               A.car_no,
+               B.zm start_station,
+               C.zm current_station,
+               D.zm end_station,
+               A.report_time,
+               A.lj,
+               A.lj_name,
+               A.yj_cf_time,
+               A.yj_dd_time,
+               A.create_time
+        from view_time_car_info A
+                     join view_dic_station B on A.start_station = B.dblm
+                     join view_dic_station C on A.current_station = C.dblm
+                     join view_dic_station D on A.end_station = D.dblm
+        where A.lj = #{lj}
+          and A.lj_name = #{ljName}
+          and A.v_cur = #{currentStation}
+          and A.sjbj = #{time}
+    </select>
+
+    <select id="getTimeCareInfoByPage" resultType="com.embracesource.traffic.time.domain.ViewTimeCarInfoDo">
+        select A.hit_id,
+               A.lybj,
+               A.sjbj,
+               A.v_cur,
+               A.car_no,
+               B.zm start_station,
+               C.zm current_station,
+               D.zm end_station,
+               A.report_time,
+               A.lj,
+               A.lj_name,
+               A.yj_cf_time,
+               A.yj_dd_time,
+               A.create_time,
+               A.report_type,
+               A.is_week_forecast
+        from view_time_car_info A
+                     join view_dic_station B on A.start_station = B.dblm
+                     join view_dic_station C on A.current_station = C.dblm
+                     join view_dic_station D on A.end_station = D.dblm
+        where A.lj = #{lj}
+          and A.lj_name = #{ljName}
+          and A.v_cur = #{currentStation}
+          and A.sjbj = #{time} limit #{pageSize}
+        offset #{page}
+    </select>
+
+
+    <select id="getforecastCar" resultType="com.embracesource.traffic.time.dto.ForecastStringDTO">
+        select nodes_info,result_source
+        from car_result_info_history
+        where item_id = #{hitId}
+    </select>
+
+    <select id="getCarInfo" resultType="com.embracesource.traffic.time.domain.ViewTimeCarInfoDo">
+        select A.hit_id,
+               A.lybj,
+               A.sjbj,
+               A.v_cur,
+               A.car_no,
+               B.zm              as start_station,
+               C.zm              as current_station,
+               D.zm              as end_station,
+               A.report_time,
+               A.lj,
+               A.lj_name,
+               A.yj_cf_time,
+               A.yj_dd_time,
+               A.create_time,
+               A.v_id,
+               A.current_station as currentStationCode,
+               A.report_type
+        from view_time_car_info A
+                     join view_dic_station B on A.start_station = B.dblm
+                     join view_dic_station C on A.current_station = C.dblm
+                     join view_dic_station D on A.end_station = D.dblm
+        where A.hit_id = #{hitId}
+          and A.sjbj = #{time}
+    </select>
+
+    <select id="getStationName" resultType="java.lang.String">
+        select zm
+        from view_dic_station
+        where dblm = #{station}
+    </select>
+
+    <select id="getDOByForecastCar" resultType="java.lang.String">
+        select nodes_info, v_id
+        from view_time_car_info
+        where hit_id = #{hitId}
+          and sjbj = #{time}
+    </select>
+</mapper>
