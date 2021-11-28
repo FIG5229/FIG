@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title data-i18n="resources.title_vectorLayerData"></title>
+    <style type="text/css">
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #fff;
+            width: 100%;
+            height: 100%
+        }
+
+        #map {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        #toolbar {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            text-align: center;
+            z-index: 100;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<!-- <div id="toolbar" class="panel panel-primary">
+    <div class='panel-heading'>
+        <h5 class='panel-title text-center' data-i18n="resources.text_basicVectorLayerData"></h5></div>
+    <div class='panel-body content'>
+        <input type="button" class="btn btn-default" data-i18n="[value]resources.text_input_value_addData" onclick="getStationData()"/>&nbsp;
+        <input type="button" class="btn btn-default" data-i18n="[value]resources.text_input_value_removeData" onclick="removeData()" />
+    </div>
+</div> -->
+<div id="map"></div>
+<script type="text/javascript" include="bootstrap,widgets" src="../js/include-web.js"></script>
+<script type="text/javascript" exclude="iclient-classic" src="../../dist/classic/include-classic.js"></script>
+<script type="text/javascript">
+    var map, layer,vector,vectorlayer,pointFeature, marker,markerlayer, dataAdded = false;
+    var root = ''
+    //var url = "https://iserver.supermap.io/iserver/services/map-world/rest/maps/World";
+    // var url="http://10.3.102.92:8081/iserver/services/map-all/rest/maps/all";
+    //var prefix='http://192.168.6.88:18080';
+    // var prefix='http://10.3.72.123:18080';
+    var url = ''
+    var prefix = ''
+    // 监听系统message事件，接收参数并查询地图线路数据函数
+    window.addEventListener("message", res => {
+      switch (res.data.cmd) {
+        case 'getMapData':
+          // 处理业务逻辑
+          getStationData(res.data.params);
+          console.log('查询地图数据', res.data.params)
+          break
+        case 'getConfig':
+          url = res.data.params.mapUrl
+          prefix = res.data.params.api
+          init();
+          console.log('配置文件url', res.data.params)
+          break
+      }
+    });
+    // 发送消息到父级vue
+    function sendMsgToParent(msg) {
+      // msg必须为string
+      window.parent.postMessage({
+        cmd: 'tbData',
+        params: msg
+      }, '*');
+    };
+
+    function init() {
+        map = new SuperMap.Map("map", {
+            controls: [
+                new SuperMap.Control.Zoom(),
+                new SuperMap.Control.Navigation(),
+            ]
+        });
+        map.addControl(new SuperMap.Control.LayerSwitcher(), new SuperMap.Pixel(42, 80));
+        layer = new SuperMap.Layer.TiledDynamicRESTLayer("World", url, null, {maxResolution: "auto"});
+        layer.events.on({"layerInitialized": addLayer});
+        vector = new SuperMap.Layer.Vector("vector");
+        vectorlayer = new SuperMap.Layer.Vector("vectorLayer");
+        markerlayer = new SuperMap.Layer.Markers("markerLayer")
+
+        var callbacks = {
+            over: function (currentFeature) {
+            //    var objData=  getStationInfo(currentFeature.geometry.startStationEn,currentFeature.geometry.cityCode,currentFeature.geometry.endStation);
+              if(currentFeature.geometry.cityCode === currentFeature.geometry.endStation) {
+                return false
+              }
+           $.ajax({
+            type: "POST",
+            url: prefix + root +"/selectPercentageInfo",
+            data: {startStationEn:currentFeature.geometry.startStationEn,currentStation: currentFeature.geometry.cityCode,endStation: currentFeature.geometry.endStation},
+            success: function(msg){
+                if(msg.code==200)
+                {
+                if(msg!=''&&msg!=null&&msg!='undefined')
+                {
+                    sendMsgToParent(msg);
+                     var $contentHTML = $("<div style='width:80px; font-size:12px;font-weight:bold ; opacity: 0.8'></div>");
+                    $(msg.data.routes).each(function(index,item) {
+                        var $item = $('<div class="item">下一站：'+ item.city +'，占比：'+ (item.percentage*100).toFixed(2) +'%</div>')
+                        $contentHTML.append($item)
+                    })
+                    closeInfoWin();
+                    var popup = new SuperMap.Popup.FramedCloud("popwin",
+                    new SuperMap.LonLat(currentFeature.geometry.x, currentFeature.geometry.y),
+                    new SuperMap.Size(310,460),
+                    $contentHTML.html(),
+                    null,
+                    true);
+                infowin = popup;
+                map.addPopup(popup);
+                }
+            }else
+            {
+                widgets.alert.showAlert(msg.message, true, 240);
+            }
+            }
+            });
+
+
+
+            }
+        };
+        var selectFeature = new SuperMap.Control.SelectFeature(vectorlayer,
+            {
+                callbacks: callbacks
+            });
+            map.addControl(selectFeature);
+            selectFeature.activate();
+    }
+
+    function addLayer() {
+        map.addLayers([layer, vector,vectorlayer, markerlayer]);
+        //显示地图范围
+        map.setCenter(new SuperMap.LonLat(106.01 , 35.65), 0);
+    }
+    var infowin = null;
+
+    function closeInfoWin() {
+        if (infowin) {
+            try {
+                infowin.hide();
+                infowin.destroy();
+            }
+            catch (e) {
+            }
+        }
+    }
+    function addData(msg) {
+        widgets.alert.clearAlert();
+        if (!dataAdded) {
+            vector.removeAllFeatures();
+            getLines(msg);
+            getText(msg);
+            dataAdded = true;
+        } else {
+            widgets.alert.showAlert(resources.msg_loadedData, true, 240);
+        }
+    }
+    //文本(始发站、当前站、终点站模式)
+    function getText(msg)
+    {
+        var sfz=msg.data.start_station.city;//始发
+        var dqz=msg.data.current_station.city;//当前
+        var zdz=msg.data.end_station.city;//终点
+        var points=[];
+        map.setCenter(new SuperMap.LonLat(msg.data.start_station.lon, msg.data.start_station.lat), 0);
+        var point1 = new SuperMap.Geometry.Point(msg.data.start_station.lon, msg.data.start_station.lat);
+        var point2 = new SuperMap.Geometry.Point(msg.data.current_station.lon, msg.data.current_station.lat);
+        var point3 = new SuperMap.Geometry.Point(msg.data.end_station.lon, msg.data.end_station.lat);
+        point1.color='#FF4E00';
+        point2.color='#FF4E00';
+        point3.color='#FF4E00';
+        markIcon('./icons/ddingweia.png', 30, 30,msg.data.start_station.lon, msg.data.start_station.lat)
+        markIcon('./icons/ddingweia.png', 30, 30,msg.data.end_station.lon, msg.data.end_station.lat)
+        markIcon('./icons/fangxiang.png', 20, 20,msg.data.current_station.lon, msg.data.current_station.lat)
+
+        point1.cityCode=msg.data.start_station.cityCode;//站点代码
+        point2.cityCode=msg.data.current_station.cityCode;
+        point3.cityCode=msg.data.end_station.cityCode;
+
+        var sfzCode=msg.data.start_station.cityCode;
+        point1.startStationEn=sfzCode;//起始站点代码
+        point2.startStationEn=sfzCode;
+        point3.startStationEn=sfzCode;
+        var zdzCode=msg.data.end_station.cityCode;
+        point1.endStation=zdzCode;//终点站点代码
+        point2.endStation=zdzCode;
+        point3.endStation=zdzCode;
+
+        points.push(point1);
+        points.push(point2);
+        points.push(point3);
+        getPoints(points,'yellow',7);//绘制大站点
+
+        var s_station= dataPro(msg);
+        var n_station=[];//去重后的小站站点
+        //获取去重后的所有小站点，然后根据根据始发、当前、终点再去重。
+        for(var i=0;i<s_station.length;i++)
+        {
+            if(s_station[i].city!==sfz&&s_station[i].city!==dqz&&s_station[i].city!==zdz)
+            {
+                n_station.push(s_station[i]);
+            }
+        }
+        var points=[];
+        for(var i=0;i<n_station.length;i++)
+        {
+          var point = new SuperMap.Geometry.Point(n_station[i].lon, n_station[i].lat);
+          console.log(n_station[i])
+          point.color=n_station[i].optimal? '#FF4E00' : '#02CE7F';
+          point.cityCode=n_station[i].cityCode;
+          point.startStationEn=sfzCode;//起始站点代码
+          point.endStation=zdzCode;//终点站点代码
+          points.push(point);
+        }
+        getPoints(points,'yellow ',5);//画小站的点
+        //使用去重后的新的小站站点画小站的站名
+        getText2(n_station);
+        var circleVector1= getFeature(msg.data.start_station.lon, msg.data.start_station.lat,sfz,'#FF4E00');
+        var circleVector2= getFeature(msg.data.current_station.lon, msg.data.current_station.lat,dqz,'#02CE7F');
+        var circleVector3= getFeature(msg.data.end_station.lon, msg.data.end_station.lat,zdz,'#FF4E00');
+        var featrue=[];
+        featrue.push(circleVector1);
+        featrue.push(circleVector2);
+        featrue.push(circleVector3);
+        vector.addFeatures(featrue);
+    }
+
+    function markIcon(path, width, height,lon,lat) {
+      // markerlayer.removeMarker(marker);
+      var size = new SuperMap.Size(width, height);
+      var offset = new SuperMap.Pixel(-(size.w / 2), -size.h);
+      var icon = new SuperMap.Icon(path, size, offset);
+      marker = new SuperMap.Marker(new SuperMap.LonLat(lon, lat), icon);
+      markerlayer.addMarker(marker);
+    }
+    //文本(小站模式)
+    function getText2(n_station)
+    {
+        var featrue=[];
+        //console.log(n_station)
+        for(var i=0;i<n_station.length;i++)
+        {
+            var circleVector= getFeature(n_station[i].lon, n_station[i].lat,n_station[i].city,n_station[i].optimal? '#FF4E00' : '#02CE7F');
+            featrue.push(circleVector);
+        }
+        vector.addFeatures(featrue);
+    }
+     //将小站所有重复点取到，不包含起点和终点。
+     function dataPro(msg)
+    {
+        let siteList = []
+        for(var i=0;i<msg.data.actual_route.length;i++){
+            let temp = msg.data.actual_route[i];//线对象
+            for(var j=0;j<temp.routes.length;j++){
+                siteList = [
+                    ...siteList,
+                    {
+                      ...temp.routes[j],
+                      optimal: temp.optimal
+                    }
+                ]
+            }
+        }
+        let obj = {}
+        let newSite = siteList.reduce((cur, next) => {
+            obj[next.city] ? '' : obj[next.city] = true && cur.push(next)
+            return cur
+        }, [])
+
+      console.log(newSite)
+        return newSite;
+    }
+    //画点
+    function getPoints(points,strokeColor,pointRadius)
+    {
+        var points2=[];
+        for(var i=0;i<points.length;i++)
+        {
+            pointFeature = new SuperMap.Feature.Vector(points[i]);
+            pointFeature.style = {
+              fillColor: points[i].color,
+              strokeColor: strokeColor,
+              pointRadius: pointRadius
+            };
+             points2.push(pointFeature);
+         }
+         vectorlayer.addFeatures(points2);
+    }
+    //组装线所需要的点数组
+    function getLines(msg)
+    {
+        if(msg.optimal)
+        {
+           // console.log(msg.optimal);//高亮显示占比最好的一条线路绘制
+            var points2=[];
+            //实际路线放入点集合
+           for(var i=0;i<msg.routes.length;i++)
+           {
+                //拆分经纬度坐标塞入points2
+               var pointx=msg.routes[i].lon;
+               var pointy=msg.routes[i].lat;
+               points2.push(new SuperMap.Geometry.Point(pointx, pointy));
+           }
+           drawLine(points2,'#FF4E00',7)
+        }else
+        {
+            //console.log(msg.optimal);//占比以外的线路线路绘制
+            var points2=[];
+            //实际路线放入点集合
+           for(var i=0;i<msg.routes.length;i++)
+           {
+                //拆分经纬度坐标塞入points2
+               var pointx=msg.routes[i].lon;
+               var pointy=msg.routes[i].lat;
+               points2.push(new SuperMap.Geometry.Point(pointx, pointy));
+
+           }
+           drawLine(points2,'#02CE7F',4)
+        }
+    }
+    //绘制线符号
+    function drawLine(points2,strokeColor,strokeWidth)
+    {
+            //点集合转线
+            var line1 = new SuperMap.Geometry.LineString(points2);
+            var linecVector = new SuperMap.Feature.Vector(line1);//创建线要素
+            linecVector.style = { //线的style
+                strokeColor: strokeColor,
+                strokeWidth: strokeWidth
+            };
+            var featrue=[];
+            featrue.push(linecVector);
+            vector.addFeatures(featrue);
+    }
+    //创建文本要素
+    function getFeature(lon,lat,lab,fontColor)
+    {
+        try{
+            var centerPoint3 = new SuperMap.Geometry.Point(lon, lat);
+            var circleVector3 = new SuperMap.Feature.Vector(centerPoint3);
+            circleVector3.style = {  //点的style
+                // stroke: true,
+                // strokeColor: "yellow",
+                // fillColor: '#ffffff',
+                // strokeWidth: 2,
+                label: lab,
+                fontColor: fontColor,
+                fontStroke: true,
+                fontStrokeColor: 'yellow',
+                labelAlign:"cb",
+                fontWeight: 'blod',
+                labelYOffset:10
+            };
+        return circleVector3;
+        }catch(error)
+        {
+            widgets.alert.showAlert("error101", true, 240);
+        }
+
+    }
+    function removeData() {
+        widgets.alert.clearAlert();
+        dataAdded = false;
+        vectorlayer.removeAllFeatures();
+        vectorlayer.refresh();
+        vector.removeAllFeatures();
+        vector.refresh();
+        markerlayer.clearMarkers()
+    }
+    function addtest() {
+        $.ajax({
+            type: "GET",
+            url: "http://localhost:8080/vmock/test1",
+            data: [],
+            success: function(msg){
+                if(msg!=''&&msg!=null&&msg!='undefined')
+                {
+                    addData(msg);
+                }
+
+
+            }
+        });
+    }
+
+    function getStationData(obj) {
+        removeData()
+        $.ajax({
+            type: "POST",
+            url: prefix + root +"/selectGISInfo",
+            // data: {start_station:'新丰镇',current_station: '西安南',end_station: '城厢'},
+            data: obj,
+            success: function(msg){
+                if(msg.code==200)
+                {
+                if(msg!=''&&msg!=null&&msg!='undefined')
+                {
+                    console.log(msg)
+                    getText(msg);//绘制始发站、当前站、终点站文本
+                    var tempRoute = msg.data.actual_route.reverse()
+                    for(var i=0;i<tempRoute.length;i++)
+                    {
+                        getLines(tempRoute[i]);//循环绘制所有线
+                    }
+                }
+            }else
+            {
+                widgets.alert.showAlert(msg.message, true, 240);
+            }
+        }
+        });
+    }
+
+    function getStationInfo(startStationEn,currentStation,endStation)
+    {
+
+    }
+
+
+</script>
+</body>
+</html>

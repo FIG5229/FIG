@@ -1,0 +1,38 @@
+.nav-right{
+  position: absolute;
+  z-index: 400;
+  right: 10px;
+  top: 50%;
+  margin-top: -65px;
+  width: 52px;
+  height: 134px;
+  background: rgba(0, 37, 99, .7);
+  border-radius: 4px;
+  cursor: pointer;
+  i{
+    color: #ffffff;
+    font-size: 50px;
+    font-weight: bold;
+    line-height: 134px;
+    text-align: center;
+  }
+}
+.nav-left{
+  position: absolute;
+  z-index: 400;
+  left: 10px;
+  top: 50%;
+  margin-top: -65px;
+  width: 52px;
+  height: 134px;
+  background: rgba(0, 37, 99, .7);
+  border-radius: 4px;
+  cursor: pointer;
+  i{
+    color: #ffffff;
+    font-size: 50px;
+    font-weight: bold;
+    line-height: 134px;
+    text-align: center;
+  }
+}
